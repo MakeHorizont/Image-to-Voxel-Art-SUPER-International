@@ -1,4 +1,5 @@
 
+
 import { Translation } from './types';
 
 export const es: Translation = {
@@ -16,7 +17,8 @@ export const es: Translation = {
     view_scene: "Ver Escena",
     view_image: "Ver Imagen",
     download_img: "Descargar Img",
-    export_html: "Exportar HTML",
+    export_html: "HTML (Web + Anim)",
+    export_glb: "GLB (3D Estático)",
     copy_code: "Copiar Código",
     generate_voxels: "Generar Vóxeles",
     regenerate: "Regenerar",
@@ -24,6 +26,7 @@ export const es: Translation = {
     close: "Cerrar",
     editing: "Editando",
     paste_image: "Pegar imagen",
+    open_editor: "Editor",
   },
   inputs: {
     desc_label: "1) Descripción del objeto",
@@ -50,5 +53,23 @@ export const es: Translation = {
     speed: "Velocidad:",
     help_text: "<b>Controles de Vuelo:</b><br>WASD / Flechas para Moverse<br>Mantener Clic Izq + Arrastrar para Mirar<br>Q/E para Subir/Bajar<br>Soporte para Gamepad",
     toggle_fullscreen: "Pantalla Completa",
+  },
+  editor: {
+    undo: "Deshacer",
+    redo: "Rehacer",
+    pause: "Pausar",
+    play: "Reproducir",
+    select: "Seleccionar (V)",
+    move: "Mover (G)",
+    rotate: "Rotar (R)",
+    scale: "Escalar (S)",
+    build: "Construir (B)",
+    break: "Romper (X)",
+    pipette: "Pipeta (I)",
+    layers: "Capas / Objetos",
+    size: "Tamaño",
+    ctx_delete: "Eliminar",
+    ctx_clone: "Clonar",
+    ctx_focus: "Enfocar",
   }
 };

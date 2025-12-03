@@ -1,4 +1,5 @@
 
+
 import { Translation } from './types';
 
 export const ru: Translation = {
@@ -16,7 +17,8 @@ export const ru: Translation = {
     view_scene: "Сцена 3D",
     view_image: "Картинка",
     download_img: "Скачать IMG",
-    export_html: "Экспорт HTML",
+    export_html: "HTML (Веб+Аним)",
+    export_glb: "GLB (Статика)",
     copy_code: "Копировать код",
     generate_voxels: "Создать воксели",
     regenerate: "Пересоздать",
@@ -24,6 +26,7 @@ export const ru: Translation = {
     close: "Закрыть",
     editing: "Редактирование",
     paste_image: "Вставить из буфера",
+    open_editor: "Редактор",
   },
   inputs: {
     desc_label: "1) Описание объекта",
@@ -50,5 +53,23 @@ export const ru: Translation = {
     speed: "Скорость:",
     help_text: "<b>Управление полётом:</b><br>WASD / Стрелки - Движение<br>Зажать ЛКМ + Драг - Осмотр<br>Q/E - Вверх/Вниз<br>Поддержка геймпада",
     toggle_fullscreen: "На весь экран",
+  },
+  editor: {
+    undo: "Назад",
+    redo: "Вперед",
+    pause: "Пауза",
+    play: "Пуск",
+    select: "Выбрать (V)",
+    move: "Двигать (G)",
+    rotate: "Крутить (R)",
+    scale: "Масштаб (S)",
+    build: "Строить (B)",
+    break: "Ломать (X)",
+    pipette: "Пипетка (I)",
+    layers: "Слои / Объекты",
+    size: "Размер",
+    ctx_delete: "Удалить",
+    ctx_clone: "Клонировать",
+    ctx_focus: "Фокус",
   }
 };

@@ -1,4 +1,5 @@
 
+
 import { Translation } from './types';
 
 export const en: Translation = {
@@ -16,7 +17,8 @@ export const en: Translation = {
     view_scene: "View Scene",
     view_image: "View Image",
     download_img: "Download Img",
-    export_html: "Export HTML",
+    export_html: "HTML (Web + Anim)",
+    export_glb: "GLB (3D Static)",
     copy_code: "Copy Code",
     generate_voxels: "Generate Voxels",
     regenerate: "Regenerate",
@@ -24,6 +26,7 @@ export const en: Translation = {
     close: "Close",
     editing: "Editing",
     paste_image: "Paste Image",
+    open_editor: "Edit Scene",
   },
   inputs: {
     desc_label: "1) Object Description",
@@ -50,5 +53,23 @@ export const en: Translation = {
     speed: "Speed:",
     help_text: "<b>Fly Controls:</b><br>WASD / Arrows to Move<br>Hold Left Click + Drag to Look<br>Q/E or Triggers to Up/Down<br>Xbox Gamepad Supported",
     toggle_fullscreen: "Toggle Fullscreen",
+  },
+  editor: {
+    undo: "Undo",
+    redo: "Redo",
+    pause: "Pause Animation",
+    play: "Play Animation",
+    select: "Select (V)",
+    move: "Move (G)",
+    rotate: "Rotate (R)",
+    scale: "Scale (S)",
+    build: "Build (B)",
+    break: "Break (X)",
+    pipette: "Pipette (I)",
+    layers: "Layers / Objects",
+    size: "Size",
+    ctx_delete: "Delete",
+    ctx_clone: "Clone",
+    ctx_focus: "Focus",
   }
 };

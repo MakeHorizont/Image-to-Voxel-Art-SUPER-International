@@ -1,4 +1,5 @@
 
+
 import { Translation } from './types';
 
 export const hi: Translation = {
@@ -16,7 +17,8 @@ export const hi: Translation = {
     view_scene: "दृश्य देखें",
     view_image: "छवि देखें",
     download_img: "इमेज डाउनलोड करें",
-    export_html: "HTML निर्यात करें",
+    export_html: "HTML (वेब + एनिमेशन)",
+    export_glb: "GLB (स्टेटिक 3D)",
     copy_code: "कोड कॉपी करें",
     generate_voxels: "वोक्सेल बनाएं",
     regenerate: "पुनः उत्पन्न करें",
@@ -24,6 +26,7 @@ export const hi: Translation = {
     close: "बंद करें",
     editing: "संपादन",
     paste_image: "इमेज पेस्ट करें",
+    open_editor: "संपादक",
   },
   inputs: {
     desc_label: "1) वस्तु का विवरण",
@@ -50,5 +53,23 @@ export const hi: Translation = {
     speed: "गति:",
     help_text: "<b>उड़ान नियंत्रण:</b><br>WASD / तीर - चाल<br>लेफ्ट क्लिक दबाएं + खींचें - देखें<br>Q/E - ऊपर/नीचे<br>गेमपैड समर्थित",
     toggle_fullscreen: "पूर्ण स्क्रीन",
+  },
+  editor: {
+    undo: "पूर्ववत",
+    redo: "फिर से",
+    pause: "विराम",
+    play: "चलाएं",
+    select: "चुनें (V)",
+    move: "हिलाएं (G)",
+    rotate: "घुमाएं (R)",
+    scale: "स्केल (S)",
+    build: "बनाएं (B)",
+    break: "तोड़ें (X)",
+    pipette: "रंग चुनें (I)",
+    layers: "परत / वस्तुएं",
+    size: "आकार",
+    ctx_delete: "हटाएं",
+    ctx_clone: "क्लोन",
+    ctx_focus: "फोकस",
   }
 };

@@ -1,4 +1,5 @@
 
+
 import { Translation } from './types';
 
 export const zh: Translation = {
@@ -16,7 +17,8 @@ export const zh: Translation = {
     view_scene: "查看场景",
     view_image: "查看图像",
     download_img: "下载图片",
-    export_html: "导出 HTML",
+    export_html: "HTML (网页+动画)",
+    export_glb: "GLB (静态3D)",
     copy_code: "复制代码",
     generate_voxels: "生成体素",
     regenerate: "重新生成",
@@ -24,6 +26,7 @@ export const zh: Translation = {
     close: "关闭",
     editing: "编辑中",
     paste_image: "粘贴图片",
+    open_editor: "编辑场景",
   },
   inputs: {
     desc_label: "1) 对象描述",
@@ -50,5 +53,23 @@ export const zh: Translation = {
     speed: "速度：",
     help_text: "<b>飞行控制：</b><br>WASD / 箭头移动<br>按住左键 + 拖动查看<br>Q/E 上升/下降<br>支持游戏手柄",
     toggle_fullscreen: "全屏切换",
+  },
+  editor: {
+    undo: "撤销",
+    redo: "重做",
+    pause: "暂停",
+    play: "播放",
+    select: "选择 (V)",
+    move: "移动 (G)",
+    rotate: "旋转 (R)",
+    scale: "缩放 (S)",
+    build: "建造 (B)",
+    break: "破坏 (X)",
+    pipette: "吸管 (I)",
+    layers: "图层 / 对象",
+    size: "尺寸",
+    ctx_delete: "删除",
+    ctx_clone: "克隆",
+    ctx_focus: "聚焦",
   }
 };

@@ -1,3 +1,6 @@
+
+
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -6,12 +9,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { generateImage, generateVoxelScene, IMAGE_SYSTEM_PROMPT, VOXEL_PROMPT } from './services/gemini';
-import { extractHtmlFromText, hideBodyText, exposeThreeJSObjects, injectGameControls, updateCameraSettings } from './utils/html';
+import { extractHtmlFromText, hideBodyText, exposeThreeJSObjects, injectGameControls, updateCameraSettings, injectVoxelEditor, VOXEL_EDITOR_START, VOXEL_EDITOR_END } from './utils/html';
 import { languages, defaultLanguage, LanguageCode } from './languages';
 
 type AppStatus = 'idle' | 'generating_image' | 'generating_voxels' | 'error';
 
-const APP_VERSION = "v1.2.0";
+const APP_VERSION = "v1.4.0";
 
 // Available aspect ratios
 const ASPECT_RATIOS = ["1:1", "3:4", "4:3", "16:9", "9:16"];
@@ -90,6 +93,9 @@ const App: React.FC = () => {
   // New UI States
   const [isDragging, setIsDragging] = useState(false);
   const [isViewerVisible, setIsViewerVisible] = useState(true);
+
+  // Editor State
+  const [isEditorActive, setIsEditorActive] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -177,6 +183,7 @@ const App: React.FC = () => {
     setVoxelCode(null);
     setThinkingText(null);
     setViewMode('image');
+    setIsEditorActive(false);
     
     setIsViewerVisible(true);
 
@@ -236,6 +243,7 @@ const App: React.FC = () => {
       setStatus('idle');
       setErrorMsg('');
       setSelectedTile('user');
+      setIsEditorActive(false);
       
       // KEEP GENERATOR OPEN
       setShowGenerator(true); 
@@ -317,6 +325,7 @@ const App: React.FC = () => {
     setErrorMsg('');
     setThinkingText(null);
     setIsViewerVisible(true);
+    setIsEditorActive(false);
     
     try {
       // 1. Fetch Image
@@ -377,6 +386,7 @@ const App: React.FC = () => {
           setSelectedTile('user');
           setShowGenerator(true); 
           setIsViewerVisible(false);
+          setIsEditorActive(false);
 
           if (userContent) {
               setInputImages(userContent.images);
@@ -409,6 +419,7 @@ const App: React.FC = () => {
     setErrorMsg('');
     setThinkingText(null);
     setIsViewerVisible(true);
+    setIsEditorActive(false);
     
     let thoughtBuffer = "";
     
@@ -470,6 +481,15 @@ const App: React.FC = () => {
             console.warn("Could not access iframe state for camera sync", e);
         }
     }
+    
+    // STRIP EDITOR CODE
+    // We remove the injected editor script so the downloaded file is just a viewer.
+    if (codeToExport.includes(VOXEL_EDITOR_START)) {
+        // Regex to match everything between START and END markers including markers
+        const regex = new RegExp(`${VOXEL_EDITOR_START}[\\s\\S]*?${VOXEL_EDITOR_END}`, 'g');
+        codeToExport = codeToExport.replace(regex, '');
+    }
+    
     return codeToExport;
   }
 
@@ -517,6 +537,22 @@ const App: React.FC = () => {
     }, (err) => {
       console.error('Could not copy text: ', err);
     });
+  };
+
+  const handleToggleEditor = () => {
+      if (!voxelCode || viewMode !== 'voxel') return;
+
+      if (!isEditorActive) {
+          // ACTIVATE EDITOR
+          const codeWithEditor = injectVoxelEditor(voxelCode, t);
+          setVoxelCode(codeWithEditor);
+          setIsEditorActive(true);
+      } else {
+          // We can't easily "remove" the editor script once injected without reloading the iframe, 
+          // but clicking this again effectively does nothing in this MVP except maybe we could reload the original code.
+          // For now, let's just alert.
+          alert("Editor is active. To close it, reload the scene or generate a new one.");
+      }
   };
 
   const isLoading = status !== 'idle' && status !== 'error';
@@ -857,6 +893,7 @@ const App: React.FC = () => {
                 <button
                 type="button"
                 onClick={handleDownload}
+                title={viewMode === 'voxel' ? "Download standalone HTML file (View-Only)." : "Download current image."}
                 disabled={isLoading}
                 className="flex-1 min-w-[140px] py-4 border-2 border-black bg-white font-bold uppercase transition-all duration-200 disabled:opacity-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                 >
@@ -868,12 +905,23 @@ const App: React.FC = () => {
                         <button
                         type="button"
                         onClick={handleGLBDownload}
+                        title="Export static 3D model geometry. Animations are NOT included in GLB."
                         disabled={isLoading}
                         className="flex-1 min-w-[140px] py-4 border-2 border-black bg-white font-bold uppercase transition-all duration-200 disabled:opacity-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                        title="Export for Blender/Unity"
                         >
-                        GLB (3D)
+                        {t.buttons.export_glb}
                         </button>
+                        
+                        {!isEditorActive && (
+                            <button
+                                type="button"
+                                onClick={handleToggleEditor}
+                                disabled={isLoading}
+                                className="flex-1 min-w-[140px] py-4 border-2 border-black bg-white font-bold uppercase transition-all duration-200 disabled:opacity-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                >
+                                {t.buttons.open_editor}
+                            </button>
+                        )}
                         
                         <button
                             type="button"

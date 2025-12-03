@@ -1,4 +1,5 @@
 
+
 export interface Translation {
   title: string;
   subtitle: string;
@@ -15,6 +16,7 @@ export interface Translation {
     view_image: string;
     download_img: string;
     export_html: string;
+    export_glb: string;
     copy_code: string;
     generate_voxels: string;
     regenerate: string;
@@ -22,6 +24,7 @@ export interface Translation {
     close: string;
     editing: string;
     paste_image: string;
+    open_editor: string;
   };
   inputs: {
     desc_label: string;
@@ -48,5 +51,23 @@ export interface Translation {
     speed: string;
     help_text: string;
     toggle_fullscreen: string;
+  };
+  editor: {
+    undo: string;
+    redo: string;
+    pause: string;
+    play: string;
+    select: string;
+    move: string;
+    rotate: string;
+    scale: string;
+    build: string;
+    break: string;
+    pipette: string;
+    layers: string;
+    size: string;
+    ctx_delete: string;
+    ctx_clone: string;
+    ctx_focus: string;
   };
 }

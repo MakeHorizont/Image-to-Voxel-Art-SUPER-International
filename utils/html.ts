@@ -1,10 +1,13 @@
 
+
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
 
 import { Translation } from "../languages/types";
+import { EDITOR_SCRIPT } from "./editor_script";
 
 
 /**
@@ -124,6 +127,26 @@ export const updateCameraSettings = (
     return modified;
 };
 
+export const VOXEL_EDITOR_START = "<!-- VOXEL_EDITOR_START -->";
+export const VOXEL_EDITOR_END = "<!-- VOXEL_EDITOR_END -->";
+
+/**
+ * Injects the Voxel Editor script into the HTML.
+ */
+export const injectVoxelEditor = (html: string, t: Translation): string => {
+    // Inject translations
+    const translationScript = `<script>window.VE_LANG = ${JSON.stringify(t.editor)};</script>`;
+
+    // Inject before closing body
+    // We add a script tag containing the module code wrapped in markers
+    const scriptTag = `${VOXEL_EDITOR_START}${translationScript}<script type="module">${EDITOR_SCRIPT}</script>${VOXEL_EDITOR_END}`;
+    
+    if (html.toLowerCase().includes('</body>')) {
+        return html.replace(/<\/body>/i, `${scriptTag}</body>`);
+    }
+    return html + scriptTag;
+};
+
 /**
  * Injects a comprehensive control system for Orbit/Fly modes, WASD, and Gamepad support.
  */
@@ -161,7 +184,7 @@ export const injectGameControls = (html: string, t: Translation): string => {
     
     // Fullscreen Button
     const fsBtn = document.createElement('button');
-    fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>';
+    fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0 4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>';
     fsBtn.title = "${t.controls.toggle_fullscreen}";
     fsBtn.style.cssText = 'padding: 6px; background: #000; color: #fff; border: 2px solid #fff; cursor: pointer; border-radius: 8px; box-shadow: 2px 2px 0 rgba(0,0,0,0.5); height: 36px; width: 36px; display: flex; align-items: center; justify-content: center;';
     
