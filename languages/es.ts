@@ -1,0 +1,54 @@
+
+import { Translation } from './types';
+
+export const es: Translation = {
+  title: "IMAGEN A VOXEL ART",
+  subtitle: "Crea escenas de arte voxel inspiradas en cualquier imagen, con Gemini 3.",
+  status: {
+    idle: "Inactivo",
+    generating_image: "Generando Imagen...",
+    generating_voxels: "Generando Vóxeles...",
+    error: "Error",
+  },
+  buttons: {
+    load_example: "Cargar Ejemplo",
+    generate_new: "Generar Nuevo",
+    view_scene: "Ver Escena",
+    view_image: "Ver Imagen",
+    download_img: "Descargar Img",
+    export_html: "Exportar HTML",
+    copy_code: "Copiar Código",
+    generate_voxels: "Generar Vóxeles",
+    regenerate: "Regenerar",
+    generate: "Generar",
+    close: "Cerrar",
+    editing: "Editando",
+    paste_image: "Pegar imagen",
+  },
+  inputs: {
+    desc_label: "1) Descripción del objeto",
+    desc_placeholder: "ej. Una casa en el árbol bajo el mar",
+    style_label: "2) Estilo",
+    style_placeholder: "ej. Voxel art, cyberpunk, iluminación cálida",
+    anim_label: "3) Animación e interactividad",
+    anim_placeholder: "ej. Peces flotando, algas balanceándose",
+    aspect_ratio: "Relación de aspecto",
+    optimize_scene: "Optimizar Escena",
+    upload_text: "Subir Imagen",
+    or_separator: "O",
+    drag_drop: "Arrastra, suelta o pega (Ctrl+V)",
+  },
+  viewer: {
+    loading_image: "Generando escena three.js con Gemini 2.5 Flash Image",
+    loading_voxels: "Generando escena three.js con Gemini 3 Pro",
+    thinking: "Pensando",
+    placeholder: "¡Selecciona un ejemplo o genera el tuyo!",
+  },
+  controls: {
+    mode_orbit: "Modo: Órbita 🔄",
+    mode_fly: "Modo: Vuelo ✈️",
+    speed: "Velocidad:",
+    help_text: "<b>Controles de Vuelo:</b><br>WASD / Flechas para Moverse<br>Mantener Clic Izq + Arrastrar para Mirar<br>Q/E para Subir/Bajar<br>Soporte para Gamepad",
+    toggle_fullscreen: "Pantalla Completa",
+  }
+};
