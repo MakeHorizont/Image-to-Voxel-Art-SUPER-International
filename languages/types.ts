@@ -21,6 +21,8 @@ export interface Translation {
     generate_voxels: string;
     regenerate: string;
     generate: string;
+    gen_image_2d: string;
+    gen_voxel_3d: string;
     close: string;
     editing: string;
     paste_image: string;
@@ -35,9 +37,17 @@ export interface Translation {
     anim_placeholder: string;
     aspect_ratio: string;
     optimize_scene: string;
+    optimize_tooltip: string;
     upload_text: string;
     or_separator: string;
     drag_drop: string;
+  };
+  modal: {
+    gen_title: string;
+    gen_body: string;
+    btn_2d: string;
+    btn_3d: string;
+    btn_cancel: string;
   };
   viewer: {
     loading_image: string;

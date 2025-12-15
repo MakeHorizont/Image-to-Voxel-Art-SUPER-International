@@ -1,6 +1,4 @@
 
-
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -14,7 +12,7 @@ import { languages, defaultLanguage, LanguageCode } from './languages';
 
 type AppStatus = 'idle' | 'generating_image' | 'generating_voxels' | 'error';
 
-const APP_VERSION = "v1.4.0";
+const APP_VERSION = "v1.5.0";
 
 // Available aspect ratios
 const ASPECT_RATIOS = ["1:1", "3:4", "4:3", "16:9", "9:16"];
@@ -42,10 +40,15 @@ interface Example {
   html: string;
 }
 
+// Inline SVG placeholders to ensure reliability (no external fetch errors)
+const THUMB_1 = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23ffebd0'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-weight='bold' font-size='40' fill='%235c4033' dominant-baseline='middle' text-anchor='middle'%3ESakura Island%3C/text%3E%3C/svg%3E`;
+const THUMB_2 = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%2387CEEB'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-weight='bold' font-size='40' fill='%23E69F46' dominant-baseline='middle' text-anchor='middle'%3EVoxel Cat%3C/text%3E%3C/svg%3E`;
+const THUMB_3 = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%2387CEEB'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-weight='bold' font-size='40' fill='%23B83228' dominant-baseline='middle' text-anchor='middle'%3EZen Garden%3C/text%3E%3C/svg%3E`;
+
 const EXAMPLES: Example[] = [
-  { img: 'https://www.gstatic.com/aistudio/starter-apps/image_to_voxel/example1.png', html: '/examples/example1.html' },
-  { img: 'https://www.gstatic.com/aistudio/starter-apps/image_to_voxel/example2.png', html: '/examples/example2.html' },
-  { img: 'https://www.gstatic.com/aistudio/starter-apps/image_to_voxel/example3.png', html: '/examples/example3.html' },
+  { img: THUMB_1, html: '/examples/example1.html' },
+  { img: THUMB_2, html: '/examples/example2.html' },
+  { img: THUMB_3, html: '/examples/example3.html' },
 ];
 
 const App: React.FC = () => {
@@ -78,6 +81,7 @@ const App: React.FC = () => {
   // Navigation State
   const [selectedTile, setSelectedTile] = useState<number | 'user' | null>(null);
   const [showGenerator, setShowGenerator] = useState(false);
+  const [showGenConfirm, setShowGenConfirm] = useState(false);
 
   const [status, setStatus] = useState<AppStatus>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -144,13 +148,19 @@ const App: React.FC = () => {
       const loaded: Record<string, string> = {};
       await Promise.all(EXAMPLES.map(async (ex) => {
         try {
-          const response = await fetch(ex.img);
-          if (response.ok) {
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            createdUrls.push(url);
-            loaded[ex.img] = url;
-          }
+            // For data URIs, we don't strictly need fetch, but this keeps logic consistent
+            // and allows mixed content types if we revert to URLs later.
+            if (ex.img.startsWith('data:')) {
+                loaded[ex.img] = ex.img;
+            } else {
+                const response = await fetch(ex.img);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    createdUrls.push(url);
+                    loaded[ex.img] = url;
+                }
+            }
         } catch (e) {
           console.error("Failed to load thumbnail:", ex.img, e);
         }
@@ -170,7 +180,13 @@ const App: React.FC = () => {
     console.error(err);
   };
 
-  const handleImageGenerate = async () => {
+  const onGenerateImageClick = () => {
+      if (!descPrompt.trim()) return;
+      setShowGenConfirm(true);
+  };
+
+  const confirmImageGeneration = async () => {
+    setShowGenConfirm(false);
     const hasDesc = descPrompt.trim().length > 0;
     if (!hasDesc) return;
     
@@ -328,17 +344,19 @@ const App: React.FC = () => {
     setIsEditorActive(false);
     
     try {
-      // 1. Fetch Image
-      const imgResponse = await fetch(example.img);
-      if (!imgResponse.ok) throw new Error(`Failed to load example image: ${imgResponse.statusText}`);
-      const imgBlob = await imgResponse.blob();
-      
-      const base64Img = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(imgBlob);
-      });
+      // 1. Load Image (from data URI or fetch)
+      let base64Img = example.img;
+      if (!base64Img.startsWith('data:')) {
+           const imgResponse = await fetch(example.img);
+           if (!imgResponse.ok) throw new Error(`Failed to load example image: ${imgResponse.statusText}`);
+           const imgBlob = await imgResponse.blob();
+           base64Img = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(imgBlob);
+          });
+      }
 
       // 2. Fetch HTML
       let htmlText = '';
@@ -409,10 +427,12 @@ const App: React.FC = () => {
   };
 
   const handleVoxelize = async () => {
-    if (inputImages.length === 0 && !voxelCode) {
-        // If we have code but no images, we can technically refine, 
-        // but usually we want at least one image or code.
-        if (!voxelCode) return;
+    // Dismiss modal if triggered from there
+    if (showGenConfirm) setShowGenConfirm(false);
+
+    // Allow generation if there is either an image OR a text description OR existing voxel code
+    if (inputImages.length === 0 && !voxelCode && !descPrompt.trim()) {
+        return;
     }
 
     setStatus('generating_voxels');
@@ -459,6 +479,7 @@ const App: React.FC = () => {
       setViewMode('voxel');
       setStatus('idle');
       setThinkingText(null);
+      setShowGenerator(false); // Auto close generator on success
     } catch (err) {
       handleError(err);
     }
@@ -657,6 +678,36 @@ const App: React.FC = () => {
         {showGenerator && (
             <div className="space-y-6 animate-in slide-in-from-top-4 fade-in duration-300 border-2 border-black p-6 bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative z-10">
             
+            {/* Modal for Generation Type Confirmation */}
+            {showGenConfirm && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-white bg-opacity-95 p-4 animate-in fade-in">
+                    <div className="max-w-md text-center space-y-6">
+                        <h3 className="text-2xl font-black uppercase">{t.modal.gen_title}</h3>
+                        <p className="text-lg font-medium text-gray-700 whitespace-pre-wrap">{t.modal.gen_body}</p>
+                        <div className="flex flex-col gap-3">
+                             <button
+                                onClick={confirmImageGeneration}
+                                className="w-full py-3 bg-black text-white border-2 border-black font-bold uppercase hover:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]"
+                             >
+                                {t.modal.btn_2d}
+                             </button>
+                             <button
+                                onClick={handleVoxelize}
+                                className="w-full py-3 bg-white text-black border-2 border-black font-bold uppercase hover:bg-gray-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]"
+                             >
+                                {t.modal.btn_3d}
+                             </button>
+                             <button
+                                onClick={() => setShowGenConfirm(false)}
+                                className="text-sm underline font-bold uppercase text-gray-500 mt-2 hover:text-black"
+                             >
+                                {t.modal.btn_cancel}
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Upload Section */}
             <div className="w-full relative">
                 <label className="block text-sm font-bold mb-2 uppercase">
@@ -773,8 +824,7 @@ const App: React.FC = () => {
             
                 <div className="flex flex-col sm:flex-row flex-grow justify-end items-center gap-6 w-full">
                     <label 
-                        className="flex items-center cursor-pointer select-none"
-                        title={`Add instruction: ${IMAGE_SYSTEM_PROMPT}`}
+                        className="flex items-center cursor-pointer select-none group relative"
                     >
                         <div className="relative">
                         <input
@@ -787,168 +837,175 @@ const App: React.FC = () => {
                         <div className={`block w-10 h-6 border-2 border-black ${useOptimization ? 'bg-black' : 'bg-gray-500'}`}></div>
                         <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 transition-transform ${useOptimization ? 'translate-x-4' : ''}`}></div>
                         </div>
-                        <div className="ml-3 text-sm font-bold uppercase">{t.inputs.optimize_scene}</div>
-                    </label>
-
-                    <button
-                        type="button"
-                        onClick={handleImageGenerate}
-                        disabled={isLoading || !descPrompt.trim()}
-                        className="w-full sm:w-40 h-12 bg-black text-white border-2 border-black font-bold uppercase hover:bg-gray-900 disabled:opacity-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.5)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)] text-sm whitespace-nowrap"
-                    >
-                        {status === 'generating_image' ? t.status.generating_image : t.buttons.generate}
-                    </button>
-                </div>
-            </div>
-            </div>
-        )}
-
-        {/* Error Message */}
-        {errorMsg && (
-          <div className="p-4 border-2 border-red-500 bg-red-50 text-red-700 text-sm font-bold animate-in fade-in" role="alert">
-            {t.status.error}: {errorMsg}
-          </div>
-        )}
-
-        {/* Viewer */}
-        <div className="space-y-2">
-            {isViewerVisible && (
-            <div className="w-full aspect-square border-2 border-black relative bg-gray-50 flex items-center justify-center overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            
-            {isLoading && (
-                <div className="absolute inset-0 bg-white z-20 flex flex-col items-start justify-center p-8 sm:p-12 overflow-hidden">
-                    <div className="w-full max-w-3xl mb-10 text-xl font-bold tracking-tight">
-                        {status === 'generating_image' ? t.viewer.loading_image : t.viewer.loading_voxels}
-                    </div>
-                    <div className="w-full max-w-3xl opacity-70 font-mono text-xs sm:text-sm whitespace-pre-wrap break-words max-h-[40%] overflow-y-auto">
-                        {thinkingText ? (
-                            <span>{thinkingText}<span className="loading-dots"></span></span>
-                        ) : (
-                            <span className="loading-dots">{t.viewer.thinking}</span>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {!currentImageData && !voxelCode && !isLoading && status !== 'error' && (
-                <div className="text-gray-400 text-center px-6 pointer-events-none">
-                <p className="text-lg">{t.viewer.placeholder}</p>
-                </div>
-            )}
-
-            {/* Image Viewer with navigation if multiple */}
-            {viewMode === 'image' && currentImageData && (
-                <div className="relative w-full h-full group">
-                    <img src={currentImageData} alt="Displayed" className="w-full h-full object-contain" />
-                    {inputImages.length > 1 && (
-                        <>
-                             <button 
-                                onClick={() => setDisplayedImageIndex(i => (i > 0 ? i - 1 : inputImages.length - 1))}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white border-2 border-black p-2 hover:bg-gray-100 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                             >
-                                &lt;
-                             </button>
-                             <button 
-                                onClick={() => setDisplayedImageIndex(i => (i < inputImages.length - 1 ? i + 1 : 0))}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white border-2 border-black p-2 hover:bg-gray-100 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                             >
-                                &gt;
-                             </button>
-                             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black text-white px-2 py-1 text-xs font-bold">
-                                {displayedImageIndex + 1} / {inputImages.length}
+                        <div className="ml-3 text-sm font-bold uppercase flex items-center gap-2">
+                             {t.inputs.optimize_scene}
+                             {/* Tooltip Icon */}
+                             <div className="relative group/tooltip" title={t.inputs.optimize_tooltip}>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-500 hover:text-black">
+                                     <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                                </svg>
                              </div>
-                        </>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3 pt-4">
+                <button
+                    onClick={onGenerateImageClick}
+                    disabled={isLoading || (!descPrompt && inputImages.length === 0)}
+                    className="w-full py-4 bg-black text-white border-2 border-black font-black text-lg uppercase tracking-wider hover:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                    {isLoading ? t.status.generating_image : t.buttons.gen_image_2d}
+                </button>
+
+                 <div className="relative flex items-center justify-center w-full my-2">
+                     <div className="border-t border-gray-300 w-full absolute"></div>
+                     <span className="bg-gray-50 px-2 text-xs font-bold text-gray-400 uppercase relative z-10">{t.inputs.or_separator}</span>
+                </div>
+
+                <button
+                    onClick={handleVoxelize}
+                    disabled={isLoading || (!descPrompt && inputImages.length === 0 && !voxelCode)}
+                    className="w-full py-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white border-2 border-black font-black text-xl uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex flex-col items-center justify-center gap-1"
+                >
+                    <span>{t.buttons.gen_voxel_3d}</span>
+                    <span className="text-xs font-normal opacity-80 normal-case tracking-normal">Gemini 3 Pro + Three.js</span>
+                </button>
+            </div>
+
+            </div>
+        )}
+
+        {/* Viewer Section */}
+        {isViewerVisible && (
+        <div className={`relative w-full aspect-square border-2 border-black bg-gray-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group overflow-hidden ${isLoading ? 'animate-pulse' : ''}`}>
+           {/* Status Overlay */}
+           {isLoading && (
+               <div className="absolute inset-0 z-20 bg-white bg-opacity-90 flex flex-col items-center justify-center p-6 text-center">
+                   <div className="text-6xl mb-4 animate-bounce">🧊</div>
+                   <h2 className="text-2xl font-black uppercase mb-2 loading-dots">
+                       {status === 'generating_image' ? t.viewer.loading_image : t.viewer.loading_voxels}
+                   </h2>
+                   {thinkingText && (
+                       <div className="max-w-md mt-4 p-3 bg-gray-100 border-l-4 border-black text-left text-sm font-mono text-gray-600 italic">
+                           <span className="font-bold not-italic mr-2">🤖 {t.viewer.thinking}:</span>
+                           {thinkingText}...
+                       </div>
+                   )}
+               </div>
+           )}
+
+           {/* Error Overlay */}
+           {status === 'error' && (
+               <div className="absolute inset-0 z-30 bg-red-50 flex flex-col items-center justify-center p-6 text-center text-red-600">
+                   <div className="text-5xl mb-4">⚠️</div>
+                   <h3 className="text-xl font-bold uppercase mb-2">Error</h3>
+                   <p className="max-w-md">{errorMsg}</p>
+                   <button onClick={() => setStatus('idle')} className="mt-6 px-6 py-2 border-2 border-red-600 font-bold uppercase hover:bg-red-100">
+                       Dismiss
+                   </button>
+               </div>
+           )}
+           
+           {/* Content */}
+           {viewMode === 'image' ? (
+                currentImageData ? (
+                    <img src={currentImageData} alt="Generated" className="w-full h-full object-contain" />
+                ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 p-8 text-center">
+                        <div className="text-4xl mb-2 opacity-30">🖼️</div>
+                        <p className="font-bold uppercase opacity-50">{t.viewer.placeholder}</p>
+                        <p className="text-xs mt-2 opacity-40">"{SAMPLE_PROMPTS[placeholderIndex]}"</p>
+                    </div>
+                )
+           ) : (
+                voxelCode && (
+                    <iframe
+                        ref={iframeRef}
+                        srcDoc={voxelCode}
+                        className="w-full h-full border-none"
+                        title="Voxel Scene"
+                        sandbox="allow-scripts allow-same-origin allow-downloads allow-pointer-lock"
+                    />
+                )
+           )}
+
+           {/* Viewer Actions Overlay (Hover) */}
+           {!isLoading && (currentImageData || voxelCode) && (
+             <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                <div className="pointer-events-auto flex flex-col gap-2">
+                    {/* View Switcher */}
+                    {inputImages.length > 0 && voxelCode && (
+                        <button 
+                            onClick={() => setViewMode(viewMode === 'image' ? 'voxel' : 'image')}
+                            className="p-2 bg-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
+                            title="Switch View"
+                        >
+                           {viewMode === 'image' ? '📦 ' + t.buttons.view_scene : '🖼️ ' + t.buttons.view_image}
+                        </button>
+                    )}
+                    
+                    {/* Editor Toggle (Only for Voxel Mode) */}
+                    {viewMode === 'voxel' && voxelCode && (
+                         <button 
+                            onClick={handleToggleEditor}
+                            className={`p-2 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all ${isEditorActive ? 'bg-black text-white' : 'bg-white'}`}
+                            title={t.buttons.open_editor}
+                        >
+                           🛠️ {t.buttons.open_editor}
+                        </button>
+                    )}
+
+                    {/* Download Image */}
+                    {viewMode === 'image' && (
+                        <button 
+                            onClick={handleDownload}
+                            className="p-2 bg-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
+                            title={t.buttons.download_img}
+                        >
+                           💾 {t.buttons.download_img}
+                        </button>
+                    )}
+
+                    {/* Export HTML */}
+                    {viewMode === 'voxel' && (
+                        <button 
+                            onClick={handleDownload}
+                            className="p-2 bg-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
+                            title={t.buttons.export_html}
+                        >
+                           🌐 {t.buttons.export_html}
+                        </button>
+                    )}
+
+                     {/* Export GLB */}
+                     {viewMode === 'voxel' && (
+                        <button 
+                            onClick={handleGLBDownload}
+                            className="p-2 bg-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
+                            title={t.buttons.export_glb}
+                        >
+                           🧊 {t.buttons.export_glb}
+                        </button>
+                    )}
+                    
+                    {/* Regenerate Code */}
+                    {selectedTile === 'user' && voxelCode && (
+                        <button 
+                            onClick={() => { setShowGenerator(true); setIsViewerVisible(false); }}
+                            className="p-2 bg-yellow-300 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all font-bold"
+                            title="Regenerate/Edit"
+                        >
+                           🔄 {t.buttons.regenerate}
+                        </button>
                     )}
                 </div>
-            )}
-
-            {voxelCode && viewMode === 'voxel' && (
-                <iframe
-                ref={iframeRef}
-                title="Voxel Scene"
-                srcDoc={voxelCode}
-                className="w-full h-full border-0"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-pointer-lock allow-modals allow-downloads"
-                />
-            )}
-            </div>
-            )}
-
-            {/* Action Buttons  */}
-            {isViewerVisible && (
-            <div className="flex flex-wrap gap-4 pt-4">
-            {currentImageData && voxelCode && (
-                <button
-                type="button"
-                onClick={() => setViewMode(viewMode === 'image' ? 'voxel' : 'image')}
-                disabled={isLoading}
-                className="flex-1 min-w-[140px] py-4 border-2 border-black bg-white font-bold uppercase transition-all duration-200 disabled:opacity-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                >
-                {viewMode === 'image' ? t.buttons.view_scene : t.buttons.view_image}
-                </button>
-            )}
-
-            {((viewMode === 'image' && currentImageData) || (viewMode === 'voxel' && voxelCode)) && (
-                <>
-                <button
-                type="button"
-                onClick={handleDownload}
-                title={viewMode === 'voxel' ? "Download standalone HTML file (View-Only)." : "Download current image."}
-                disabled={isLoading}
-                className="flex-1 min-w-[140px] py-4 border-2 border-black bg-white font-bold uppercase transition-all duration-200 disabled:opacity-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                >
-                {viewMode === 'image' ? t.buttons.download_img : t.buttons.export_html}
-                </button>
-                
-                {viewMode === 'voxel' && (
-                    <>
-                        <button
-                        type="button"
-                        onClick={handleGLBDownload}
-                        title="Export static 3D model geometry. Animations are NOT included in GLB."
-                        disabled={isLoading}
-                        className="flex-1 min-w-[140px] py-4 border-2 border-black bg-white font-bold uppercase transition-all duration-200 disabled:opacity-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                        >
-                        {t.buttons.export_glb}
-                        </button>
-                        
-                        {!isEditorActive && (
-                            <button
-                                type="button"
-                                onClick={handleToggleEditor}
-                                disabled={isLoading}
-                                className="flex-1 min-w-[140px] py-4 border-2 border-black bg-white font-bold uppercase transition-all duration-200 disabled:opacity-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                                >
-                                {t.buttons.open_editor}
-                            </button>
-                        )}
-                        
-                        <button
-                            type="button"
-                            onClick={handleCopyEmbed}
-                            disabled={isLoading}
-                            className="flex-1 min-w-[140px] py-4 border-2 border-black bg-white font-bold uppercase transition-all duration-200 disabled:opacity-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                            >
-                            {t.buttons.copy_code}
-                        </button>
-                   </>
-                )}
-                </>
-            )}
-            
-            {(inputImages.length > 0 || voxelCode) && (
-                <button
-                type="button"
-                onClick={handleVoxelize}
-                disabled={isLoading}
-                className="flex-1 min-w-[160px] py-4 bg-black text-white border-2 border-black font-bold uppercase disabled:opacity-50 transition-all duration-200 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] hover:bg-gray-900 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.5)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]"
-                >
-                {voxelCode ? (inputImages.length > 0 ? "Update Scene" : t.buttons.regenerate) : t.buttons.generate_voxels}
-                </button>
-            )}
-            </div>
-            )}
+             </div>
+           )}
         </div>
+        )}
       </div>
     </div>
   );
